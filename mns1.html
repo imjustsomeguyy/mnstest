@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>M&S Barcode Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1a1f1c;
+      color: #dfeee0;
+      margin: 0;
+      padding: 1rem;
+      text-align: center;
+      transition: background 3.0s, color 2.5s;
+    }
+
+    .container {
+      background: #222827;
+      color: #dfeee0;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      max-width: 450px;
+      margin: auto;
+      box-shadow: 0 20px rgba(0,0,0,0.5);
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      filter: brightness(1.2);
+      transition: filter 0.5s;
+    }
+
+    body.light-mode img {
+      filter: brightness(0.3) saturate(1.5);
+    }
+
+    input, button {
+      padding: 0.6rem;
+      margin: 0.5rem 0;
+      font-size: 0.8rem;
+      border-radius: 0.5rem;
+      border: none;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: calc(100% - 1rem);
+    }
+
+    button.price-button {
+      background: #68b06a; /* M&S green-ish */
+      color: #ffffff;
+      margin: 0.3rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button.price-button:hover {
+      background: #4f9a52;
+    }
+
+    .barcode-frame {
+      background: #e6efe7;
+      padding: 1rem;
+      border-radius: 0.8rem;
+      margin-top: 1rem;
+    }
+
+    .barcode-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+      color: #1f2b21;
+      font-weight: bold;
+    }
+
+    canvas {
+      max-width: 100%;
+    }
+
+    .watermark {
+      color: #6b7c6e;
+      margin-top: 0.5rem;
+    }
+
+    .dark-mode-toggle {
+      background: #2a2f2d;
+      color: #cfe8d1;
+      border: 1px solid #555;
+      margin-top: 1rem;
+    }
+
+    body.light-mode {
+      background: #f3faf4;
+      color: #1f2b21;
+    }
+
+    body.light-mode .container {
+      background: #ffffff;
+      color: #1f2b21;
+    }
+
+    body.light-mode button.price-button {
+      background: #68b06a;
+      color: #ffffff;
+    }
+
+    body.light-mode .dark-mode-toggle {
+      background: #e0efe2;
+      color: #1f2b21;
+    }
+
+    .socials {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .social-item {
+      background: #2a2f2d;
+      padding: 0.5rem 0.8rem;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      transition: background 0.2s;
+    }
+
+    .social-item:hover {
+      background: #3a413f;
+    }
+
+    body.light-mode .social-item {
+      background: #e0efe2;
+    }
+
+    .copy-msg {
+      font-size: 0.7rem;
+      color: #68b06a;
+      display: none;
+    }
+
+    .bottom-image {
+      margin-top: 15px;
+      max-width: 120px;
+      width: 100%;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <!-- M&S Logo Placeholder -->
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Marks_and_Spencer_logo_%282009%29.svg/1920px-Marks_and_Spencer_logo_%282009%29.svg.png" alt="M&S Logo" />
+
+  <input type="text" id="itemNumberInput" placeholder="Enter 13 digit item number" maxlength="13"
+         oninput="this.value=this.value.replace(/\D/g,'').slice(0,13)" />
+
+  <input type="text" id="barcodeLabelInput" placeholder="Enter label for barcode" maxlength="30" />
+
+  <div>
+    <!-- Example prices relevant to M&S -->
+    <button class="price-button" onclick="setPriceAndGenerate(50)">50p</button>
+    <button class="price-button" onclick="setPriceAndGenerate(150)">£1.50</button>
+    <button class="price-button" onclick="setPriceAndGenerate(300)">£3.00</button>
+    <button class="price-button" onclick="showCustomPrice()">Custom</button>
+  </div>
+
+  <div id="customPriceContainer" style="display:none;">
+    <input type="number" id="price" placeholder="Enter price in pence" min="1" max="9999" />
+    <button onclick="generateBarcode()">Generate Barcode</button>
+  </div>
+
+  <div class="barcode-frame">
+    <div id="barcodeLabel" class="barcode-label"></div>
+    <canvas id="barcodeCanvas" width="400" height="150"></canvas>
+    <div class="watermark">Marks & Spencer Item Code Generator</div>
+  </div>
+
+  <!-- Socials can remain or be adapted -->
+  <div class="socials">
+    <div class="social-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#5865F2">
+        <path d="M20 4a16 16 0 0 0-4-1l-.2.4a14 14 0 0 1 3.6 1.7 13 13 0 0 0-3.2-1.5 12 12 0 0 0-4.2 0A13 13 0 0 0 8.8 5a14 14 0 0 1 3.6-1.7L12 3a16 16 0 0 0-4 1C5.6 7.6 5 11 5.2 14.4A16 16 0 0 0 9.6 16l.8-1.1a10 10 0 0 1-1.3-.6l.3-.2c2.5 1.1 5.3 1.1 7.8 0l.3.2c-.4.2-.9.4-1.3.6l.8 1.1a16 16 0 0 0 4.4-1.6C19 11 18.4 7.6 20 4z"/>
+      </svg>
+      M&S_User1
+      <span class="copy-msg">Copied!</span>
+    </div>
+    <!-- Add more social links if needed -->
+  </div>
+
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()">Toggle Dark Theme🌙☀️</button>
+
+  <!-- M&S branded image placeholder -->
+  <img src="https://seeklogo.com/images/M/marks-and-spencer-logo-484B0A57B5-seeklogo.png" alt="M&S Branding" class="bottom-image" />
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<script>
+function copyText(text, el) {
+  navigator.clipboard.writeText(text);
+  const msg = el.querySelector(".copy-msg");
+  msg.style.display = "inline";
+  setTimeout(() => msg.style.display = "none", 1200);
+}
+
+function padLeft(str, length) {
+  return str.toString().padStart(length, '0');
+}
+
+// Simplified check digit calculation for EAN-13, assuming a common structure
+// For specific M&S internal codes, this might need adjustment if their structure differs significantly.
+function calculateCheckDigit(input) {
+  let sumOdd = 0;
+  let sumEven = 0;
+  for (let i = 0; i < input.length; i++) {
+    const digit = parseInt(input[i], 10);
+    if ((i + 1) % 2 === 0) { // Even position
+      sumEven += digit;
+    } else { // Odd position
+      sumOdd += digit;
+    }
+  }
+  const total = (sumOdd * 3) + sumEven;
+  const remainder = total % 10;
+  return remainder === 0 ? 0 : 10 - remainder;
+}
+
+function generateBarcode() {
+  const itemNumberInput = document.getElementById('itemNumberInput').value;
+  const priceInput = document.getElementById('price').value;
+  const labelInput = document.getElementById('barcodeLabelInput').value;
+
+  if (!itemNumberInput || itemNumberInput.length !== 13) {
+    alert("Please enter a valid 13-digit M&S item number.");
+    return;
+  }
+  if (!priceInput || parseInt(priceInput) < 0) {
+    alert("Please enter a valid price in pence.");
+    return;
+  }
+
+  document.getElementById("barcodeLabel").innerText = labelInput || "M&S Item"; // Default label
+
+  // M&S specific barcode structure is not publicly defined for retail.
+  // We'll use a common structure for demonstration, using the provided examples.
+  // The provided examples:
+  // 82212312312312310016000077 (original 13 digit 21231231231231)
+  // 82112312312312310057500078 (original 13 digit 11231231231231)
+  // 82112312312312330002000079 (original 13 digit 11231231231233)
+
+  // These examples suggest a structure where the item number might be embedded.
+  // For a general generator, we'll construct a plausible EAN-13 like barcode.
+  // The prefix '82' often indicates internal or specific country codes.
+  // We will use the provided 13-digit item numbers directly, and append a calculated check digit.
+  // This assumes the provided 13 digits are the core data *before* the final check digit.
+
+  const baseNumber = `2${itemNumberInput}`; // Assuming '2' as a common M&S internal prefix, and using the provided 13 digits as is.
+  // If the provided examples (e.g., 82212312312312310016000077) are the *full* barcode, then the logic would be different.
+  // For now, we'll assume the user enters a 13-digit item code, and we generate a barcode from it.
+
+  // Let's try to match the *format* of your examples:
+  // 82 + 13 digit item number + price (6 digits) + check digit (1 digit) = 20 digits total for GTIN-14
+  // However, JsBarcode with CODE128 can handle arbitrary strings.
+  // We'll construct a CODE128 string that includes item number and price, and let JsBarcode encode it.
+
+  // If you intend to generate standard EAN-13 or similar, the input and calculation would need to conform to those standards.
+  // For now, we will use the provided item numbers and a price to create a CODE128 barcode.
+  // A common structure for internal barcodes might be: [Company Prefix] + [Item Code] + [Price] + [Check Digit]
+  // Given your examples, it's unclear if the price is part of the 13 digits or appended.
+  // Let's assume the 13 digits *are* the item number, and we append the price.
+
+  const formattedPrice = padLeft(priceInput, 6); // Price in pence, padded to 6 digits.
+  const barcodeData = `2${itemNumberInput}${formattedPrice}`; // Using '2' as a placeholder prefix. If M&S has a specific prefix, it should be used here.
+
+  // For CODE128, we don't strictly need a check digit calculated in the same way as EAN.
+  // JsBarcode will handle the encoding. We'll simply pass the data string.
+
+  JsBarcode("#barcodeCanvas", barcodeData, {
+    format: "CODE128",
+    displayValue: true,
+    fontSize: 10,
+    width: 2,
+    height: 80,
+    margin: 5
+  });
+}
+
+function setPriceAndGenerate(pence) {
+  document.getElementById('price').value = pence;
+  document.getElementById('customPriceContainer').style.display = 'none';
+  generateBarcode();
+}
+
+function showCustomPrice() {
+  document.getElementById('customPriceContainer').style.display = 'block';
+}
+
+function toggleDarkMode() {
+  document.body.classList.toggle("light-mode");
+}
+
+// Initialize with a default or example barcode if needed
+// document.addEventListener('DOMContentLoaded', () => {
+//   document.getElementById('itemNumberInput').value = '11231231231231'; // Example from your input
+//   document.getElementById('price').value = '50';
+//   generateBarcode();
+// });
+</script>
+
+</body>
+</html>
